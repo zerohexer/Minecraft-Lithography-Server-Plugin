@@ -3,8 +3,6 @@ package com.zerohexer.paperlithography.render;
 import com.zerohexer.paperlithography.Keys;
 import com.zerohexer.paperlithography.panel.GridPos;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
@@ -15,60 +13,49 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * Spawns the vanilla-rendered entities for a panel's cells.
+ * Spawns the vanilla-rendered entities for a panel's cells, parameterized by a render base
+ * location, cell size, and Y offset — so the same grid can render compact near the panel
+ * (cell = 1/4 block, +1 above it) or full-size in the build world (cell = 1 block).
  *
- * <p>The grid is rendered in the air <em>one block above</em> the panel base, because the
- * panel base block itself is solid and would otherwise occlude everything inside it.
- *
- * <p>Each occupied cell gets a {@link BlockDisplay} (the visible tiny block); each empty
- * cell gets a small translucent marker so the editable lattice is visible; and every cell
- * gets an {@link Interaction} entity (a clickable hitbox, since block_display has none).
+ * <p>block_display has no hitbox, so each cell also gets an {@link Interaction} entity. Its
+ * {@code panelPos} PDC always points at the real panel block (for click routing), independent
+ * of where it is rendered.
  */
 public final class PanelRenderer {
+    /** Compact (near-panel) cell size: 1/4 of a block. */
     public static final double CELL = 1.0 / GridPos.SIZE;
-    public static final float SCALE = (float) CELL;
-    /** Render the grid this many blocks above the panel base so it isn't hidden inside it. */
+    /** Compact render is one block above the panel base so the solid panel block doesn't occlude it. */
     public static final double Y_OFFSET = 1.0;
-    /** Empty-cell marker block. */
-    public static final Material MARKER = Material.LIGHT_GRAY_STAINED_GLASS;
-    private static final float MARKER_SCALE = (float) (CELL * 0.45);
 
     private PanelRenderer() {
     }
 
-    /** Min corner of the cell — where a full-size block model is anchored. */
-    public static Location displayLoc(Location base, GridPos g) {
-        return base.clone().add(g.x * CELL, Y_OFFSET + g.y * CELL, g.z * CELL);
+    /** Min corner of a cell (where a full-size block model is anchored). */
+    public static Location displayLoc(Location base, GridPos g, double cell, double yOff) {
+        return base.clone().add(g.x * cell, yOff + g.y * cell, g.z * cell);
     }
 
-    /** Bottom-center of the cell — where the interaction hitbox is anchored. */
-    public static Location interactionLoc(Location base, GridPos g) {
-        return base.clone().add((g.x + 0.5) * CELL, Y_OFFSET + g.y * CELL, (g.z + 0.5) * CELL);
+    /** Bottom-center of a cell (interaction hitbox anchor). */
+    public static Location interactionLoc(Location base, GridPos g, double cell, double yOff) {
+        return base.clone().add((g.x + 0.5) * cell, yOff + g.y * cell, (g.z + 0.5) * cell);
     }
 
-    private static final float[] FULL_SCALE = {1f, 1f, 1f};
-    private static final float[] ZERO_TRANS = {0f, 0f, 0f};
-
-    public static BlockDisplay spawnDisplay(World world, Location base, GridPos g, BlockData data, Keys keys) {
-        return spawnDisplay(world, base, g, data, keys, FULL_SCALE, ZERO_TRANS);
-    }
-
-    /** Build a Transformation from cell-fraction scale + translation. */
-    public static Transformation transform(float[] scale, float[] trans) {
+    /** Transformation from cell-fraction scale + translation, scaled to the given cell size. */
+    public static Transformation transform(float[] scale, float[] trans, double cell) {
+        float c = (float) cell;
         return new Transformation(
-                new Vector3f(trans[0] * SCALE, trans[1] * SCALE, trans[2] * SCALE),
+                new Vector3f(trans[0] * c, trans[1] * c, trans[2] * c),
                 new Quaternionf(),
-                new Vector3f(scale[0] * SCALE, scale[1] * SCALE, scale[2] * SCALE),
+                new Vector3f(scale[0] * c, scale[1] * c, scale[2] * c),
                 new Quaternionf());
     }
 
-    /** Spawn a cell display with a per-component model scale + translation (cell fractions). */
-    public static BlockDisplay spawnDisplay(World world, Location base, GridPos g, BlockData data, Keys keys,
-                                            float[] scale, float[] trans) {
-        Location loc = displayLoc(base, g);
-        return world.spawn(loc, BlockDisplay.class, d -> {
-            d.setBlock(data);
-            d.setTransformation(transform(scale, trans));
+    /** Spawn one composite model part at the given cell. */
+    public static BlockDisplay spawnPart(Location base, GridPos g, ModelPart p, Keys keys, double cell, double yOff) {
+        Location loc = displayLoc(base, g, cell, yOff);
+        return loc.getWorld().spawn(loc, BlockDisplay.class, d -> {
+            d.setBlock(p.data);
+            d.setTransformation(transform(p.scale, p.trans, cell));
             d.setPersistent(false);
             d.setBrightness(new Display.Brightness(15, 15));
             d.setInterpolationDuration(2);
@@ -76,32 +63,14 @@ public final class PanelRenderer {
         });
     }
 
-    /** Spawn one composite model part. */
-    public static BlockDisplay spawnPart(World world, Location base, GridPos g, ModelPart p, Keys keys) {
-        return spawnDisplay(world, base, g, p.data, keys, p.scale, p.trans);
-    }
-
-    /** A small translucent cube centered in an empty cell, so the grid is visible. */
-    public static BlockDisplay spawnMarker(World world, Location base, GridPos g, Keys keys) {
-        float t = (float) ((CELL - MARKER_SCALE) / 2.0);
-        return world.spawn(displayLoc(base, g), BlockDisplay.class, d -> {
-            d.setBlock(MARKER.createBlockData());
-            d.setTransformation(new Transformation(
-                    new Vector3f(t, t, t),
-                    new Quaternionf(),
-                    new Vector3f(MARKER_SCALE, MARKER_SCALE, MARKER_SCALE),
-                    new Quaternionf()));
-            d.setPersistent(false);
-            d.setBrightness(new Display.Brightness(15, 15));
-            d.getPersistentDataContainer().set(keys.ownedEntity, PersistentDataType.BYTE, (byte) 1);
-        });
-    }
-
-    public static Interaction spawnInteraction(World world, Location base, GridPos g, Keys keys) {
-        String panelPos = base.getBlockX() + "," + base.getBlockY() + "," + base.getBlockZ();
-        return world.spawn(interactionLoc(base, g), Interaction.class, it -> {
-            it.setInteractionWidth(SCALE);
-            it.setInteractionHeight(SCALE);
+    /** Spawn a clickable interaction for a cell; {@code panelPos} routes clicks to the real panel. */
+    public static Interaction spawnInteraction(Location base, GridPos g, Keys keys, double cell, double yOff,
+                                               String panelPos) {
+        Location loc = interactionLoc(base, g, cell, yOff);
+        float c = (float) cell;
+        return loc.getWorld().spawn(loc, Interaction.class, it -> {
+            it.setInteractionWidth(c);
+            it.setInteractionHeight(c);
             it.setResponsive(false);
             it.setPersistent(false);
             it.getPersistentDataContainer().set(keys.ownedEntity, PersistentDataType.BYTE, (byte) 1);

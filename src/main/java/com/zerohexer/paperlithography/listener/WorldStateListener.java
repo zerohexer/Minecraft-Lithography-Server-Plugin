@@ -41,6 +41,7 @@ public class WorldStateListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        if (plugin.buildRooms() != null) plugin.buildRooms().cleanup(event.getPlayer());
         plugin.sessions().close(event.getPlayer());
     }
 }

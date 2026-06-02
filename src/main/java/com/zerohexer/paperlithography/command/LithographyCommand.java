@@ -38,6 +38,28 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("build")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage(ChatColor.RED + "Players only.");
+                return true;
+            }
+            if (!player.hasPermission("paperlithography.use")) {
+                player.sendMessage(ChatColor.RED + "No permission.");
+                return true;
+            }
+            if (plugin.buildRooms().isInRoom(player)) {
+                plugin.buildRooms().exit(player);
+                return true;
+            }
+            Block pb = findPanelBlock(player);
+            if (pb == null) {
+                player.sendMessage(ChatColor.RED + "Look at (or stand near) a panel, then /lithography build.");
+                return true;
+            }
+            plugin.buildRooms().enter(player, plugin.store().getPanel(pb), pb.getLocation());
+            return true;
+        }
+
         if (args[0].equalsIgnoreCase("debug")) {
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(ChatColor.RED + "Players only.");
@@ -98,23 +120,28 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
         return sb.toString();
     }
 
-    /** Dump the looked-at (or nearest) panel's components and wire channel levels. */
-    private void debug(Player player) {
+    /** The panel block the player is looking at, or the nearest one within 8 blocks. */
+    private Block findPanelBlock(Player player) {
         Block target = player.getTargetBlockExact(6);
-        Panel panel = (target != null && plugin.store().isPanel(target)) ? plugin.store().getPanel(target) : null;
-        if (panel == null) {
-            // fall back to the nearest panel within 8 blocks
-            double best = Double.MAX_VALUE;
-            for (Panel p : plugin.store().allPanels()) {
-                Location loc = plugin.store().locationOf(p);
-                if (loc == null || !loc.getWorld().equals(player.getWorld())) continue;
-                double d = loc.distanceSquared(player.getLocation());
-                if (d < best && d < 64) {
-                    best = d;
-                    panel = p;
-                }
+        if (target != null && plugin.store().isPanel(target)) return target;
+        double best = Double.MAX_VALUE;
+        Block found = null;
+        for (Panel p : plugin.store().allPanels()) {
+            Location loc = plugin.store().locationOf(p);
+            if (loc == null || !loc.getWorld().equals(player.getWorld())) continue;
+            double d = loc.distanceSquared(player.getLocation());
+            if (d < best && d < 64) {
+                best = d;
+                found = loc.getBlock();
             }
         }
+        return found;
+    }
+
+    /** Dump the looked-at (or nearest) panel's components and wire channel levels. */
+    private void debug(Player player) {
+        Block pb = findPanelBlock(player);
+        Panel panel = pb == null ? null : plugin.store().getPanel(pb);
         if (panel == null) {
             player.sendMessage(ChatColor.RED + "No panel found — look at one or stand near it.");
             return;
@@ -173,6 +200,7 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GRAY + "/lithography give <component> " + ChatColor.DARK_GRAY + "— get a tiny part");
         sender.sendMessage(ChatColor.GRAY + "/lithography give all " + ChatColor.DARK_GRAY + "— get a panel + every part");
         sender.sendMessage(ChatColor.GRAY + "/lithography recipes " + ChatColor.DARK_GRAY + "— how to craft everything");
+        sender.sendMessage(ChatColor.GRAY + "/lithography build " + ChatColor.DARK_GRAY + "— enter/leave the full-size build room");
         sender.sendMessage(ChatColor.DARK_GRAY + "Place the panel, then sneak + right-click it to edit. "
                 + "Right-click cells to place parts; sneak + right-click a part to remove it.");
     }
@@ -181,7 +209,7 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : new String[]{"help", "give", "recipes"}) {
+            for (String s : new String[]{"help", "give", "recipes", "build"}) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("give")) {

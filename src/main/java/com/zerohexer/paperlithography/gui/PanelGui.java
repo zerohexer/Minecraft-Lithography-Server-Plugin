@@ -28,6 +28,7 @@ import java.util.List;
  */
 public final class PanelGui {
     public static final int NAV_DOWN = 36;
+    public static final int BUILD_BUTTON = 37;
     public static final int NAV_INFO = 40;
     public static final int VIEW_TOGGLE = 42;
     public static final int GRID_TOGGLE = 43;
@@ -75,6 +76,11 @@ public final class PanelGui {
         // Navigation.
         inv.setItem(NAV_DOWN, button(Material.RED_STAINED_GLASS_PANE,
                 ChatColor.RED + "◀ Layer Down", ChatColor.GRAY + "Currently Y = " + h.level));
+        inv.setItem(BUILD_BUTTON, button(Material.CRAFTING_TABLE,
+                ChatColor.GOLD + "Enter Build Room",
+                ChatColor.GRAY + "Teleport into a full-size walk-in",
+                ChatColor.GRAY + "version of this panel to edit it.",
+                ChatColor.DARK_GRAY + "Run /lithography build again to leave."));
         inv.setItem(NAV_INFO, button(Material.PAPER,
                 ChatColor.YELLOW + "Layer  Y = " + h.level,
                 ChatColor.GRAY + "Layers 0–" + (GridPos.SIZE - 1) + " (bottom→top)",

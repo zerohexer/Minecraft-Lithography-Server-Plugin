@@ -21,6 +21,7 @@ public final class PaperLithographyPlugin extends JavaPlugin {
     private EditSessionManager sessions;
     private PropagationEngine engine;
     private com.zerohexer.paperlithography.item.Recipes recipes;
+    private com.zerohexer.paperlithography.world.BuildRoomManager buildRooms;
 
     @Override
     public void onEnable() {
@@ -30,6 +31,8 @@ public final class PaperLithographyPlugin extends JavaPlugin {
         this.sessions = new EditSessionManager(this, keys);
         this.engine = new PropagationEngine(this);
         this.engine.setSessions(sessions);
+        this.buildRooms = new com.zerohexer.paperlithography.world.BuildRoomManager(this);
+        this.buildRooms.ensureWorld();
 
         // Sweep any orphaned display/interaction entities left by a crash.
         sweepOrphanEntities();
@@ -70,6 +73,7 @@ public final class PaperLithographyPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (buildRooms != null) buildRooms.cleanupAll();
         if (sessions != null) sessions.closeAll();
         if (engine != null) engine.stop();
         if (store != null) store.saveAllLoaded();
@@ -109,5 +113,9 @@ public final class PaperLithographyPlugin extends JavaPlugin {
 
     public com.zerohexer.paperlithography.item.Recipes recipes() {
         return recipes;
+    }
+
+    public com.zerohexer.paperlithography.world.BuildRoomManager buildRooms() {
+        return buildRooms;
     }
 }

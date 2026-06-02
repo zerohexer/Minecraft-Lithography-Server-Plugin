@@ -112,6 +112,17 @@ public class EditSessionManager {
         return true;
     }
 
+    /** Open a full-scale immersive build session for a panel, rendered at {@code renderBase}. */
+    public void openBuild(Player player, Panel panel, Location panelBase, Location renderBase) {
+        Map<String, EditSession> m = sessions.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>());
+        String key = baseKey(panelBase);
+        EditSession existing = m.remove(key);
+        if (existing != null) existing.close();
+        EditSession s = new EditSession(plugin, player.getUniqueId(), panel, panelBase, renderBase, 1.0, 2.0, true);
+        s.open(keys);
+        m.put(key, s);
+    }
+
     /** Close every panel this player has open. */
     public void close(Player player) {
         Map<String, EditSession> m = sessions.remove(player.getUniqueId());

@@ -94,6 +94,11 @@ public class GuiListener implements Listener {
             PanelGui.render(h);
             return;
         }
+        if (raw == PanelGui.BUILD_BUTTON) {
+            player.closeInventory();
+            plugin.buildRooms().enter(player, h.panel, h.base);
+            return;
+        }
         if (raw == PanelGui.GRID_TOGGLE) {
             h.showGrid = !h.showGrid;
             plugin.sessions().setShowGrid(player, h.base, h.showGrid);

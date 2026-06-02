@@ -28,8 +28,12 @@ import java.util.UUID;
 public class EditSession {
     public final UUID playerId;
     public final Panel panel;
-    public final Location base;
-    private final World world;
+    public final Location base;          // the real panel block (for keying, saving, routing)
+    public final boolean buildMode;      // true = full-scale immersive room in the build world
+    private final Location renderBase;   // where the grid is drawn
+    private final double cellSize;
+    private final double yOffset;
+    private final String panelPos;       // "bx,by,bz" of the real panel, for interaction routing
     private final Plugin plugin;
 
     public int layer = 0;
@@ -46,12 +50,28 @@ public class EditSession {
             new float[]{0.45f, 0.45f, 0.45f}, new float[]{0.275f, 0.275f, 0.275f});
     private static final java.util.List<ModelPart> MARKER_MODEL = java.util.List.of(MARKER_PART);
 
+    /** Compact view rendered at the panel (cell = 1/4 block, +1 above the panel). */
     public EditSession(Plugin plugin, UUID playerId, Panel panel, Location base) {
+        this(plugin, playerId, panel, base, base, PanelRenderer.CELL, PanelRenderer.Y_OFFSET, false);
+    }
+
+    /** General constructor (compact or full-scale build room). */
+    public EditSession(Plugin plugin, UUID playerId, Panel panel, Location base,
+                       Location renderBase, double cellSize, double yOffset, boolean buildMode) {
         this.plugin = plugin;
         this.playerId = playerId;
         this.panel = panel;
         this.base = base.clone();
-        this.world = base.getWorld();
+        this.renderBase = renderBase.clone();
+        this.cellSize = cellSize;
+        this.yOffset = yOffset;
+        this.buildMode = buildMode;
+        this.panelPos = base.getBlockX() + "," + base.getBlockY() + "," + base.getBlockZ();
+        if (buildMode) showAll = true; // walk among all layers at full scale
+    }
+
+    private World world() {
+        return renderBase.getWorld();
     }
 
     /** Make an entity visible only to this session's owner (private 3D view). */
@@ -74,7 +94,7 @@ public class EditSession {
             for (int y = loYter(); y <= hiYInclusive(); y++) {
                 for (int z = 0; z < GridPos.SIZE; z++) {
                     GridPos g = new GridPos(x, y, z);
-                    Interaction it = PanelRenderer.spawnInteraction(world, base, g, keys);
+                    Interaction it = PanelRenderer.spawnInteraction(renderBase, g, keys, cellSize, yOffset, panelPos);
                     privatize(it);
                     interactions.add(it.getUniqueId());
                 }
@@ -138,7 +158,7 @@ public class EditSession {
                 Entity e = Bukkit.getEntity(existing.get(i));
                 if (e instanceof BlockDisplay bd) {
                     bd.setBlock(parts.get(i).data);
-                    bd.setTransformation(PanelRenderer.transform(parts.get(i).scale, parts.get(i).trans));
+                    bd.setTransformation(PanelRenderer.transform(parts.get(i).scale, parts.get(i).trans, cellSize));
                 } else {
                     reuse = false;
                     break;
@@ -156,7 +176,7 @@ public class EditSession {
         }
         List<UUID> ids = new ArrayList<>(parts.size());
         for (ModelPart p : parts) {
-            BlockDisplay bd = PanelRenderer.spawnPart(world, base, g, p, keys);
+            BlockDisplay bd = PanelRenderer.spawnPart(renderBase, g, p, keys, cellSize, yOffset);
             privatize(bd);
             ids.add(bd.getUniqueId());
         }
