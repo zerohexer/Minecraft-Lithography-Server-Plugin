@@ -33,6 +33,7 @@ public final class PaperLithographyPlugin extends JavaPlugin {
         this.engine.setSessions(sessions);
         this.buildRooms = new com.zerohexer.paperlithography.world.BuildRoomManager(this);
         this.buildRooms.ensureWorld();
+        this.buildRooms.start();
 
         // Sweep any orphaned display/interaction entities left by a crash.
         sweepOrphanEntities();
@@ -73,7 +74,10 @@ public final class PaperLithographyPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (buildRooms != null) buildRooms.cleanupAll();
+        if (buildRooms != null) {
+            buildRooms.stop();
+            buildRooms.cleanupAll();
+        }
         if (sessions != null) sessions.closeAll();
         if (engine != null) engine.stop();
         if (store != null) store.saveAllLoaded();

@@ -66,7 +66,9 @@ public class EditSession {
         this.cellSize = cellSize;
         this.yOffset = yOffset;
         this.buildMode = buildMode;
-        this.panelPos = base.getBlockX() + "," + base.getBlockY() + "," + base.getBlockZ();
+        // Include the world so build-room interactions (in the void world) resolve the real panel.
+        this.panelPos = base.getWorld().getUID() + ";"
+                + base.getBlockX() + ";" + base.getBlockY() + ";" + base.getBlockZ();
         if (buildMode) showAll = true; // walk among all layers at full scale
     }
 

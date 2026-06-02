@@ -7,6 +7,7 @@ import com.zerohexer.paperlithography.panel.GridPos;
 import com.zerohexer.paperlithography.panel.Panel;
 import com.zerohexer.paperlithography.util.Directions;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -40,12 +41,15 @@ public class EntityInteractionListener implements Listener {
         String pos = entity.getPersistentDataContainer()
                 .get(plugin.keys().panelPos, PersistentDataType.STRING);
         if (pos == null) return null;
-        String[] parts = pos.split(",");
-        if (parts.length != 3) return null;
         try {
-            World w = entity.getWorld();
-            return w.getBlockAt(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
-        } catch (NumberFormatException ex) {
+            String[] parts = pos.split(";");
+            if (parts.length == 4) { // worldUid;x;y;z
+                World w = Bukkit.getWorld(java.util.UUID.fromString(parts[0]));
+                if (w == null) return null;
+                return w.getBlockAt(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
+            }
+            return null;
+        } catch (RuntimeException ex) {
             return null;
         }
     }

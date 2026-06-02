@@ -37,6 +37,11 @@ public class WorldStateListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         if (plugin.recipes() != null) plugin.recipes().discover(event.getPlayer());
+        // Rescue anyone who logged in inside the build world (disconnect mid-edit / restart).
+        if (plugin.buildRooms() != null && plugin.buildRooms().isBuildWorld(event.getPlayer().getWorld())) {
+            plugin.getServer().getScheduler().runTaskLater(plugin,
+                    () -> plugin.buildRooms().evacuate(event.getPlayer()), 1L);
+        }
     }
 
     @EventHandler

@@ -51,9 +51,12 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
                 plugin.buildRooms().exit(player);
                 return true;
             }
-            Block pb = findPanelBlock(player);
+            // Must be looking directly at a panel — no nearest-panel fallback (avoids grabbing a random one).
+            Block target = player.getTargetBlockExact(6);
+            Block pb = (target != null && plugin.store().isPanel(target)) ? target : null;
             if (pb == null) {
-                player.sendMessage(ChatColor.RED + "Look at (or stand near) a panel, then /lithography build.");
+                player.sendMessage(ChatColor.RED + "Look directly at a panel, then /lithography build "
+                        + ChatColor.GRAY + "(or use the Build Room button in the panel's GUI).");
                 return true;
             }
             plugin.buildRooms().enter(player, plugin.store().getPanel(pb), pb.getLocation());

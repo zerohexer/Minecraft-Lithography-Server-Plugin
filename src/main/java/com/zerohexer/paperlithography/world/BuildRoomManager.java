@@ -9,9 +9,11 @@ import org.bukkit.Difficulty;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +31,7 @@ public class BuildRoomManager {
     private World buildWorld;
     private int spotCounter = 0;
     private final Map<UUID, Room> rooms = new HashMap<>();
+    private BukkitTask flightTask;
 
     private record Room(Location returnLoc, Location spot, boolean prevFlight, boolean prevFlying, Location panelBase) {
     }
@@ -68,6 +71,23 @@ public class BuildRoomManager {
         return rooms.containsKey(player.getUniqueId());
     }
 
+    /** Keep flight enabled for players in a room (survival flight gets reset after teleport). */
+    public void start() {
+        flightTask = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+            if (rooms.isEmpty()) return;
+            for (UUID id : rooms.keySet()) {
+                Player p = Bukkit.getPlayer(id);
+                if (p == null || !p.isOnline()) continue;
+                if (p.getGameMode() == GameMode.CREATIVE || p.getGameMode() == GameMode.SPECTATOR) continue;
+                if (!p.getAllowFlight()) p.setAllowFlight(true);
+            }
+        }, 20L, 20L);
+    }
+
+    public void stop() {
+        if (flightTask != null) flightTask.cancel();
+    }
+
     /** Toggle: enter the build room for a panel, or leave if already in one. */
     public void enter(Player player, Panel panel, Location panelBase) {
         if (isInRoom(player)) {
@@ -103,6 +123,14 @@ public class BuildRoomManager {
         player.setAllowFlight(true);
         player.teleport(tp);
         player.setFlying(true);
+        // Re-apply flight after the cross-world teleport settles (it otherwise gets reset),
+        // so survival players can fly inside the room too.
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && isInRoom(player)) {
+                player.setAllowFlight(true);
+                player.setFlying(true);
+            }
+        }, 2L);
         player.sendMessage(ChatColor.AQUA + "Entered the build room "
                 + ChatColor.GRAY + "(full-size). Right-click a cell to place/use, left-click to remove. "
                 + ChatColor.DARK_GRAY + "Run /lithography build again to leave.");
@@ -135,6 +163,33 @@ public class BuildRoomManager {
             } catch (Throwable ignored) {
             }
         }
+    }
+
+    /**
+     * Rescue a player who logged in inside the build world without an active room
+     * (disconnected mid-edit, or server restarted) — teleport them to safety so they don't
+     * fall into the void and die.
+     */
+    public void evacuate(Player player) {
+        rooms.remove(player.getUniqueId());
+        Location safe = player.getBedSpawnLocation();
+        if (safe == null) {
+            for (World w : Bukkit.getWorlds()) {
+                if (!w.getName().equals(WORLD_NAME)) {
+                    safe = w.getSpawnLocation();
+                    break;
+                }
+            }
+        }
+        if (safe == null) return;
+        player.setFlying(false);
+        player.setAllowFlight(false);
+        player.teleport(safe);
+        player.sendMessage(ChatColor.YELLOW + "Returned you from the build room (you disconnected while inside).");
+    }
+
+    public boolean isBuildWorld(World w) {
+        return w != null && w.getName().equals(WORLD_NAME);
     }
 
     public void cleanupAll() {
