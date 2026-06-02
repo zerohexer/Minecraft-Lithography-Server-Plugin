@@ -1,0 +1,21 @@
+name: PaperLithography
+version: '${version}'
+main: com.zerohexer.paperlithography.PaperLithographyPlugin
+api-version: '1.20'
+authors: [zerohexer]
+description: Etch functional redstone contraptions onto a sub-block grid inside a single block. Vanilla clients, no mods.
+commands:
+  lithography:
+    description: Paper-Lithography commands.
+    usage: /lithography <help|give|edit>
+    aliases: [litho, lith]
+permissions:
+  paperlithography.use:
+    description: Create, edit, and break Lithography panels.
+    default: true
+  paperlithography.give:
+    description: Use /lithography give to obtain a panel item.
+    default: op
+  paperlithography.admin:
+    description: Administrative commands.
+    default: op
