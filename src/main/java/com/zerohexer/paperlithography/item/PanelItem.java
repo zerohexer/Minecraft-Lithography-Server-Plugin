@@ -1,7 +1,5 @@
 package com.zerohexer.paperlithography.item;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import com.zerohexer.paperlithography.Keys;
 import com.zerohexer.paperlithography.component.MiniBlockType;
 import org.bukkit.Bukkit;
@@ -11,9 +9,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Factory + detector for the panel item and the tiny-component items. */
 public final class PanelItem {
@@ -70,14 +75,18 @@ public final class PanelItem {
 
     public ItemStack createComponentItem(MiniBlockType type) {
         String tex = heads == null ? null : heads.get(type);
+        URL skinUrl = tex == null ? null : skinUrlOf(tex);
+
         ItemStack item;
         ItemMeta meta;
-        if (tex != null) {
+        if (skinUrl != null) {
             item = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skull = (SkullMeta) item.getItemMeta();
-            PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-            profile.setProperty(new ProfileProperty("textures", tex));
-            skull.setPlayerProfile(profile);
+            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
+            PlayerTextures textures = profile.getTextures();
+            textures.setSkin(skinUrl);
+            profile.setTextures(textures);
+            skull.setOwnerProfile(profile);
             meta = skull;
         } else {
             item = new ItemStack(type.itemMaterial);
@@ -90,6 +99,26 @@ public final class PanelItem {
         meta.getPersistentDataContainer().set(keys.componentType, PersistentDataType.INTEGER, type.id);
         item.setItemMeta(meta);
         return item;
+    }
+
+    /** Resolve a texture URL from a base64 "Value", a raw textures URL, or a bare texture hash. */
+    private static URL skinUrlOf(String tex) {
+        try {
+            String url;
+            if (tex.startsWith("http")) {
+                url = tex;
+            } else if (tex.matches("[0-9a-fA-F]{16,64}")) {
+                url = "https://textures.minecraft.net/texture/" + tex;
+            } else {
+                String json = new String(Base64.getDecoder().decode(tex), StandardCharsets.UTF_8);
+                Matcher m = Pattern.compile("\"url\"\\s*:\\s*\"([^\"]+)\"").matcher(json);
+                if (!m.find()) return null;
+                url = m.group(1);
+            }
+            return new URL(url.replaceFirst("^http://", "https://"));
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public MiniBlockType getComponentType(ItemStack item) {
