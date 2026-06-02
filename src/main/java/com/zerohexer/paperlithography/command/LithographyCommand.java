@@ -63,6 +63,29 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("sethead") || args[0].equalsIgnoreCase("clearhead")) {
+            if (!sender.hasPermission("paperlithography.admin")) {
+                sender.sendMessage(ChatColor.RED + "No permission.");
+                return true;
+            }
+            boolean clear = args[0].equalsIgnoreCase("clearhead");
+            if (args.length < 2 || (!clear && args.length < 3)) {
+                sender.sendMessage(ChatColor.RED + "Usage: /lithography "
+                        + (clear ? "clearhead <component>" : "sethead <component> <base64-value>"));
+                return true;
+            }
+            MiniBlockType type = MiniBlockType.byName(args[1]);
+            if (type == null) {
+                sender.sendMessage(ChatColor.RED + "Unknown component '" + args[1] + "'. Try: " + componentNames());
+                return true;
+            }
+            plugin.heads().set(type, clear ? null : args[2]);
+            if (plugin.recipes() != null) plugin.recipes().register(); // refresh crafted-item icons
+            sender.sendMessage(ChatColor.AQUA + (clear ? "Cleared" : "Set") + " head texture for "
+                    + type.displayName + ". " + ChatColor.GRAY + "Re-/give to see it (existing items keep their look).");
+            return true;
+        }
+
         if (args[0].equalsIgnoreCase("debug")) {
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(ChatColor.RED + "Players only.");
@@ -204,20 +227,30 @@ public class LithographyCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GRAY + "/lithography give all " + ChatColor.DARK_GRAY + "— get a panel + every part");
         sender.sendMessage(ChatColor.GRAY + "/lithography recipes " + ChatColor.DARK_GRAY + "— how to craft everything");
         sender.sendMessage(ChatColor.GRAY + "/lithography build " + ChatColor.DARK_GRAY + "— enter/leave the full-size build room");
-        sender.sendMessage(ChatColor.DARK_GRAY + "Place the panel, then sneak + right-click it to edit. "
-                + "Right-click cells to place parts; sneak + right-click a part to remove it.");
+        if (sender.hasPermission("paperlithography.admin")) {
+            sender.sendMessage(ChatColor.GRAY + "/lithography sethead <component> <base64> "
+                    + ChatColor.DARK_GRAY + "— custom head texture for a part (from a head site)");
+        }
+        sender.sendMessage(ChatColor.DARK_GRAY + "Place the panel, right-click it to open the editor "
+                + "(sneak+right-click = in-world 3D). Right-click cells to place/use, left-click to remove.");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : new String[]{"help", "give", "recipes", "build"}) {
+            for (String s : new String[]{"help", "give", "recipes", "build", "sethead", "clearhead"}) {
                 if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("give")) {
             out.add("panel");
             out.add("all");
+            for (MiniBlockType t : MiniBlockType.values()) {
+                out.add(t.name().toLowerCase(Locale.ROOT));
+            }
+            out.removeIf(s -> !s.startsWith(args[1].toLowerCase(Locale.ROOT)));
+        } else if (args.length == 2
+                && (args[0].equalsIgnoreCase("sethead") || args[0].equalsIgnoreCase("clearhead"))) {
             for (MiniBlockType t : MiniBlockType.values()) {
                 out.add(t.name().toLowerCase(Locale.ROOT));
             }

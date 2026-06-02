@@ -92,7 +92,7 @@ public class PanelInteractionListener implements Listener {
         if (panel == null) return;
         plugin.engine().markDirty(panel);
         com.zerohexer.paperlithography.gui.PanelGuiHolder holder =
-                new com.zerohexer.paperlithography.gui.PanelGuiHolder(panel, panelBlock.getLocation());
+                new com.zerohexer.paperlithography.gui.PanelGuiHolder(panel, panelBlock.getLocation(), plugin.panelItem());
         // Adopt the current 3D view's layer/mode so the two stay in sync (don't reset it).
         int current = plugin.sessions().getLayer(player, panelBlock.getLocation());
         if (current >= 0) holder.level = current;

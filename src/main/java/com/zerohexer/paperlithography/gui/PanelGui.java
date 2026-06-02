@@ -69,7 +69,7 @@ public final class PanelGui {
             for (int x = 0; x < GridPos.SIZE; x++) {
                 GridPos g = new GridPos(x, h.level, z);
                 MiniBlock b = h.panel.get(g);
-                inv.setItem(z * 9 + x, b == null ? emptyCell(x, h.level, z) : compIcon(b, x, h.level, z));
+                inv.setItem(z * 9 + x, b == null ? emptyCell(x, h.level, z) : compIcon(h, b, x, h.level, z));
             }
         }
 
@@ -103,7 +103,7 @@ public final class PanelGui {
         // Palette.
         MiniBlockType[] types = MiniBlockType.values();
         for (int i = 0; i < types.length; i++) {
-            inv.setItem(PALETTE_START + i, paletteIcon(types[i], !h.eraser && h.brush == types[i]));
+            inv.setItem(PALETTE_START + i, paletteIcon(h, types[i], !h.eraser && h.brush == types[i]));
         }
         inv.setItem(ERASER_SLOT, eraserIcon(h.eraser));
     }
@@ -134,8 +134,8 @@ public final class PanelGui {
                 ChatColor.DARK_GRAY + "Left-click: place selected part");
     }
 
-    private static ItemStack compIcon(MiniBlock b, int x, int y, int z) {
-        ItemStack it = new ItemStack(b.type().itemMaterial);
+    private static ItemStack compIcon(PanelGuiHolder h, MiniBlock b, int x, int y, int z) {
+        ItemStack it = h.items.createComponentItem(b.type()); // head texture if configured, else vanilla
         ItemMeta m = it.getItemMeta();
         m.setDisplayName(ChatColor.AQUA + b.type().displayName);
         List<String> lore = new ArrayList<>();
@@ -153,8 +153,8 @@ public final class PanelGui {
         return it;
     }
 
-    private static ItemStack paletteIcon(MiniBlockType type, boolean selected) {
-        ItemStack it = new ItemStack(type.itemMaterial);
+    private static ItemStack paletteIcon(PanelGuiHolder h, MiniBlockType type, boolean selected) {
+        ItemStack it = h.items.createComponentItem(type); // head texture if configured, else vanilla
         ItemMeta m = it.getItemMeta();
         m.setDisplayName(ChatColor.YELLOW + "Place: " + type.displayName);
         m.setLore(Arrays.asList(

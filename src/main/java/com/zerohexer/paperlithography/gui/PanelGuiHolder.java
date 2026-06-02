@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 public class PanelGuiHolder implements InventoryHolder {
     public final Panel panel;
     public final Location base;
+    public final com.zerohexer.paperlithography.item.PanelItem items;
     public int level = 0;
     public MiniBlockType brush = MiniBlockType.LEVER;
     public boolean eraser = false;
@@ -19,9 +20,10 @@ public class PanelGuiHolder implements InventoryHolder {
 
     private Inventory inventory;
 
-    public PanelGuiHolder(Panel panel, Location base) {
+    public PanelGuiHolder(Panel panel, Location base, com.zerohexer.paperlithography.item.PanelItem items) {
         this.panel = panel;
         this.base = base;
+        this.items = items;
     }
 
     public void setInventory(Inventory inventory) {

@@ -16,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class PaperLithographyPlugin extends JavaPlugin {
     private Keys keys;
+    private com.zerohexer.paperlithography.item.HeadTextures heads;
     private PanelItem panelItem;
     private PanelStore store;
     private EditSessionManager sessions;
@@ -26,7 +27,8 @@ public final class PaperLithographyPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         this.keys = new Keys(this);
-        this.panelItem = new PanelItem(keys);
+        this.heads = new com.zerohexer.paperlithography.item.HeadTextures(this);
+        this.panelItem = new PanelItem(keys, heads);
         this.store = new PanelStore(this, keys);
         this.sessions = new EditSessionManager(this, keys);
         this.engine = new PropagationEngine(this);
@@ -101,6 +103,10 @@ public final class PaperLithographyPlugin extends JavaPlugin {
 
     public PanelItem panelItem() {
         return panelItem;
+    }
+
+    public com.zerohexer.paperlithography.item.HeadTextures heads() {
+        return heads;
     }
 
     public PanelStore store() {
