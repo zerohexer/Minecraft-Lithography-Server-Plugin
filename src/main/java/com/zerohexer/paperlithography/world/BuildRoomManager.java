@@ -122,9 +122,8 @@ public class BuildRoomManager {
         Location tp = new Location(buildWorld, sx + GridPos.SIZE / 2.0, sy + 1, sz - 3.0, 0f, 10f);
         player.setAllowFlight(true);
         player.teleport(tp);
-        player.setFlying(true);
-        // Re-apply flight after the cross-world teleport settles (it otherwise gets reset),
-        // so survival players can fly inside the room too.
+        // The cross-world teleport resets allowFlight, so enabling flight here would throw
+        // ("not allowed to fly"). Re-enable allowFlight THEN setFlying next tick, in order.
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline() && isInRoom(player)) {
                 player.setAllowFlight(true);
